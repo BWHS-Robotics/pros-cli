@@ -1,6 +1,7 @@
 from typing import *
 
 from .generic_device import GenericDevice
+from ...common import logger
 
 
 class StreamDevice(GenericDevice):
@@ -42,6 +43,7 @@ class RawStreamDevice(StreamDevice):
         pass
 
     def read(self) -> Tuple[bytes, bytes]:
+        logger(__name__).debug("Reading from raw stream device")
         return b'', self.port.read_all()
 
     def write(self, data: Union[bytes, str]):

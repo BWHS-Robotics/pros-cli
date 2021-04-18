@@ -218,7 +218,12 @@ class Terminal(object):
                 logger(__name__).exception(e)
         try:
             while not self.alive.is_set() and self._reader_alive:
+
+                logger(__name__).debug("Attempting to find terminal information")
                 data = self.device.read()
+
+
+
                 if not data:
                     continue
                 if data[0] == b'sout':
