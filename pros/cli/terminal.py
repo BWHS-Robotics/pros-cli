@@ -83,14 +83,9 @@ def terminal(port: str, backend: str, **kwargs):
 
     logger(__name__).info(f"Attempting to receive data...")
 
-
-    # while True:
-    #     time.sleep(1)
-    #     logger(__name__).debug(f"Waiting for GUI to close...")
-
     signal.signal(signal.SIGINT, term.stop)
     term.start()
-    # app.start_thread()
+
     while not term.alive.is_set():
         time.sleep(0.005)
     term.join()

@@ -219,10 +219,8 @@ class Terminal(object):
         try:
             while not self.alive.is_set() and self._reader_alive:
 
-                logger(__name__).debug("Attempting to find terminal information")
+                # logger(__name__).debug("Attempting to find terminal information")
                 data = self.device.read()
-
-
 
                 if not data:
                     continue
@@ -287,8 +285,10 @@ class Terminal(object):
 
     # noinspection PyUnusedLocal
     def stop(self, *args):
+        logger(__name__).info("Cleaning up console")
         self.console.cleanup()
         if not self.alive.is_set():
+            logger(__name__).info("Alive was not set")
             logger(__name__).warning('Stopping terminal')
             self.alive.set()
             self.device.destroy()
@@ -296,6 +296,7 @@ class Terminal(object):
                 self.console.cleanup()
                 self.console.cancel()
             logger(__name__).info('All done!')
+        logger(__name__).info("Ending stop")
 
     def join(self):
         try:

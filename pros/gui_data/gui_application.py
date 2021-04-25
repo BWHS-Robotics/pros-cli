@@ -29,11 +29,16 @@ from pros.serial.ports import PortConnectionException
 
 
 class GUITerminal(Terminal):
-    def reader(self):
+
+    def __init__(self, port_instance: StreamDevice, transformations=(),
+                 output_raw: bool = False, request_banner: bool = True):
+        super().__init__(port_instance, transformations, output_raw, request_banner)
 
         logger(__name__).info("Attempting to connect to named pipe...")
-        named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
+        self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
         logger(__name__).info("...Done!")
+
+    def reader(self):
 
         if self.request_banner:
             try:
@@ -51,8 +56,6 @@ class GUITerminal(Terminal):
                 text = decode_bytes_to_str(data[1])
 
                 # Instead of writing to console, write to a pipe server
-                logger(__name__).debug("Writing to named pipe...")
-
                 # As the C# GUI currently doesn't have support for ASCII color codes, filter them from the output See
                 # https://stackoverflow.com/questions/30425105/filter-special-chars-such-as-color-codes-from-shell
                 # -output for more details
@@ -61,26 +64,34 @@ class GUITerminal(Terminal):
 
                 encoded_message = text.encode("ascii")
 
-                logger(__name__).debug("Attempting to write " + text)
-
                 # Pack data using struct and send it to the named pipe
-                named_pipe.write(struct.pack('I', len(encoded_message)) + encoded_message)
-                named_pipe.seek(0)
-                logger(__name__).debug("Wrote " + encoded_message.decode('ascii'))
-                time.sleep(0.02)
+                self.named_pipe.write(struct.pack('I', len(encoded_message)) + encoded_message)
+                self.named_pipe.seek(0)
         except UnicodeError as e:
             logger(__name__).exception(e)
         except PortConnectionException:
             logger(__name__).warning(f'Connection to {self.device.name} broken')
             if not self.alive.is_set():
                 self.stop()
-                named_pipe.close()
+                self.named_pipe.close()
         except Exception as e:
             if not self.alive.is_set():
                 logger(__name__).exception(e)
             else:
                 logger(__name__).debug(e)
-            self.stop()
-            named_pipe.close()
-        logger(__name__).info('Terminal receiver dying')
-        named_pipe.close()  # Close named pipe
+            try:
+                logger(__name__).info("Beginning terminal closure..")
+                self.stop()
+                self.named_pipe.close()
+            except Exception as exceptionException:
+                logger(__name__).error("Encountered exception while closing:")
+                logger(__name__).exception(exceptionException)
+
+    def stop(self, *args):
+        super().stop()
+
+        if self.named_pipe:
+            logger(__name__).info('Closing pipe...')
+            self.named_pipe.close()
+            logger(__name__).info('Pipe successfully closed and disposed.')
+        quit()

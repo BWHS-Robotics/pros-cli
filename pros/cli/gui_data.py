@@ -1,3 +1,6 @@
+import os
+import subprocess
+import signal
 import time
 from typing import *
 
@@ -25,6 +28,13 @@ def gui_data(project: c.Project, build_args):
     Transfers GUI data from the robot to the computer
     """
 
+    logger(__name__).info("Starting C# GUI Application...")
+    # subprocess.call(r"C:\Program Files\PROS\cli\WestCore GUI.exe") # FOR RUNNING GUI AUTOMATICALLY
+
+    # Wait for GUI to launch
+    time.sleep(5)  # TODO: Don't have a manual sleep here
+    logger(__name__).info("Application successfully started, waiting for connection")
+
     logger(__name__).debug(f"Finding port...")
 
     port = DirectPort(resolve_v5_port(None, 'user')[0])
@@ -32,7 +42,11 @@ def gui_data(project: c.Project, build_args):
     app = GUITerminal(device)
 
     logger(__name__).info(f"Attempting to receive data...")
+
+    signal.signal(signal.SIGINT, app.stop)
     app.start()
 
-    while True:
-        time.sleep(1)
+    while not app.alive.is_set():
+        time.sleep(0.005)
+    app.join()
+    logger(__name__).info("Shutting down terminal...")
