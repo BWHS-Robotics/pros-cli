@@ -1,27 +1,9 @@
-import struct
-import threading
-import time
-from collections import defaultdict
-from typing import *
-from queue import Queue
-
-import msgpack
-
 import re
 
-from pros.common import logger
 from pros.serial.devices import StreamDevice
 from pros.serial.terminal import Terminal
 
-import codecs
-import os
-import signal
-import sys
-import threading
-
 import struct
-
-import colorama
 
 from pros.common.utils import logger
 from pros.serial import decode_bytes_to_str
@@ -34,9 +16,14 @@ class GUITerminal(Terminal):
                  output_raw: bool = False, request_banner: bool = True):
         super().__init__(port_instance, transformations, output_raw, request_banner)
 
-        logger(__name__).info("Attempting to connect to named pipe...")
-        self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
-        logger(__name__).info("...Done!")
+        try:
+            logger(__name__).info("Attempting to connect to named pipe...")
+            self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
+            logger(__name__).info("...Done!")
+        except FileNotFoundError as e:
+            logger(__name__).error("The program failed to connect to the named pipe server. Is the C# GUI running?",
+                                   extra={'sentry': False})
+            exit()  # Probably shouldn't use exit here, oh well!
 
     def reader(self):
 
@@ -71,6 +58,11 @@ class GUITerminal(Terminal):
             logger(__name__).exception(e)
         except PortConnectionException:
             logger(__name__).warning(f'Connection to {self.device.name} broken')
+            if not self.alive.is_set():
+                self.stop()
+                self.named_pipe.close()
+        except (BrokenPipeError, OSError) as e:
+            logger(__name__).warning('Connection to GUI was abruptly stopped. Closing terminal...')
             if not self.alive.is_set():
                 self.stop()
                 self.named_pipe.close()
