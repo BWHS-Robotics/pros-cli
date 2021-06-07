@@ -1,4 +1,7 @@
+import os
 import re
+import time
+import subprocess
 
 from pros.serial.devices import StreamDevice
 from pros.serial.terminal import Terminal
@@ -11,17 +14,29 @@ from pros.serial.ports import PortConnectionException
 
 
 class GUITerminal(Terminal):
+    GUI_EXE_PATH = r"C:\Program Files (x86)\GUI_WPF_Migration-Installer\GUI-WPF-Migration.exe"
 
     def __init__(self, port_instance: StreamDevice, transformations=(),
                  output_raw: bool = False, request_banner: bool = True):
         super().__init__(port_instance, transformations, output_raw, request_banner)
 
         try:
-            logger(__name__).info("Attempting to connect to named pipe...")
-            self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
-            logger(__name__).info("...Done!")
+            # Launch C# GUI EXE
+            # TODO: The path is currently hardcoded. Find a way to autodetect where it is?
+            logger(__name__).info("Launching exe...")
+            subprocess.Popen(self.GUI_EXE_PATH)
+
+            while True:
+                try:
+                    logger(__name__).info("Attempting to connect to named pipe...")
+                    self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
+                    logger(__name__).info("...Done!")
+                    break
+                except (OSError, BrokenPipeError):
+                    time.sleep(0.5)
+
         except FileNotFoundError as e:
-            logger(__name__).error("The program failed to connect to the named pipe server. Is the C# GUI running?",
+            logger(__name__).error("The GUI executable path was not found. Are you sure you installed it?",
                                    extra={'sentry': False})
             exit()  # Probably shouldn't use exit here, oh well!
 
