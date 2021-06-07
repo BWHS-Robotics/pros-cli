@@ -1,4 +1,4 @@
-# PROS CLI
+# PROS CLI - GUI Fork
 
 [![Build Status](https://dev.azure.com/purdue-acm-sigbots/CLI/_apis/build/status/purduesigbots.pros-cli?branchName=develop)](https://dev.azure.com/purdue-acm-sigbots/CLI/_build/latest?definitionId=6&branchName=develop)
 
