@@ -14,11 +14,12 @@ def gui_data_cli():
     pass
 
 
-@gui_data_cli.command(aliases=['build'])
+@gui_data_cli.command(aliases=['gui'])
 @project_option()
 @click.argument('build-args', nargs=-1)
 @default_options
-def gui_data(project: c.Project, build_args):
+@click.option('--banner/--no-banner', 'request_banner', default=True)
+def gui_data(project: c.Project, **kwargs):
     """
     Transfers GUI data from the robot to the computer
     """
@@ -32,7 +33,7 @@ def gui_data(project: c.Project, build_args):
 
     port = DirectPort(resolve_v5_port(None, 'user')[0])
     device = V5UserDevice(port)
-    app = GUITerminal(device)
+    app = GUITerminal(device, request_banner=kwargs.pop('request_banner', True))
 
     logger(__name__).info(f"Attempting to receive data...")
 

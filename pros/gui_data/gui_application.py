@@ -1,5 +1,6 @@
 import os
 import re
+import threading
 import time
 import subprocess
 
@@ -24,12 +25,25 @@ class GUITerminal(Terminal):
             # Launch C# GUI EXE
             # TODO: The path is currently hardcoded. Find a way to autodetect where it is?
             logger(__name__).info("Launching exe...")
-            subprocess.Popen(self.GUI_EXE_PATH)
+            # subprocess.Popen(self.GUI_EXE_PATH)
 
             while True:
                 try:
-                    logger(__name__).info("Attempting to connect to named pipe...")
-                    self.named_pipe = open(r'//./pipe/west-pros-pipe', 'wb', 0)
+                    logger(__name__).info("Attempting to connect to the reader named pipe...")
+
+                    # Names are from the perspective of the CLI
+                    self.reader_named_pipe = open(r'//./pipe/pros-gui-reader-pipe', 'r', buffering=1)
+                    logger(__name__).info("...Done!")
+                    break
+                except (OSError, BrokenPipeError):
+                    time.sleep(0.5)
+
+            while True:
+                try:
+                    logger(__name__).info("Attempting to connect to the writer named pipe...")
+
+                    # Names are from the perspective of the CLI
+                    self.writer_named_pipe = open(r'//./pipe/pros-gui-writer-pipe', 'wb+', 0)
                     logger(__name__).info("...Done!")
                     break
                 except (OSError, BrokenPipeError):
@@ -40,13 +54,39 @@ class GUITerminal(Terminal):
                                    extra={'sentry': False})
             exit()  # Probably shouldn't use exit here, oh well!
 
+        self.gui_reader_thread = threading.Thread(target=self.gui_reader,
+                                                  name='gui-reader')
+        self.gui_reader_thread.daemon = True
+        self.gui_reader_thread.start()
+
+    def gui_reader(self):
+        try:
+            print("Started GUI reading thread...")
+            while True:
+                if self.reader_named_pipe:
+                    # self.reader_named_pipe.flush()
+                    # self.reader_named_pipe.seek(0)
+                    # print("Attempting to read...")
+                    data = self.reader_named_pipe.readline().strip() + "\n"
+                    # print("Found something")
+
+                    if len(data) == 0:
+                        print("GUI Connection Lost, Closing...")
+                        break
+
+                    # print("Writing " + data)
+
+                    # Write received data to terminal
+                    self.console.write(data)
+                    self.device.write(data.encode(encoding='utf-8'))
+        except Exception as ex:
+            print("Encountered error in GUI Reader")
+            print(ex)
+
     def reader(self):
 
-        if self.request_banner:
-            try:
-                self.device.write(b'pRb')
-            except Exception as e:
-                logger(__name__).exception(e)
+        self.device.write(b'pRb')
+
         try:
             while not self.alive.is_set() and self._reader_alive:
 
@@ -67,20 +107,20 @@ class GUITerminal(Terminal):
                 encoded_message = text.encode("ascii")
 
                 # Pack data using struct and send it to the named pipe
-                self.named_pipe.write(struct.pack('I', len(encoded_message)) + encoded_message)
-                self.named_pipe.seek(0)
+                self.writer_named_pipe.write(struct.pack('I', len(encoded_message)) + encoded_message)
+                self.writer_named_pipe.seek(0)
         except UnicodeError as e:
             logger(__name__).exception(e)
         except PortConnectionException:
             logger(__name__).warning(f'Connection to {self.device.name} broken')
             if not self.alive.is_set():
                 self.stop()
-                self.named_pipe.close()
+                self.writer_named_pipe.close()
         except (BrokenPipeError, OSError) as e:
             logger(__name__).warning('Connection to GUI was abruptly stopped. Closing terminal...')
             if not self.alive.is_set():
                 self.stop()
-                self.named_pipe.close()
+                self.writer_named_pipe.close()
         except Exception as e:
             if not self.alive.is_set():
                 logger(__name__).exception(e)
@@ -89,7 +129,6 @@ class GUITerminal(Terminal):
             try:
                 logger(__name__).info("Beginning terminal closure..")
                 self.stop()
-                self.named_pipe.close()
             except Exception as exceptionException:
                 logger(__name__).error("Encountered exception while closing:")
                 logger(__name__).exception(exceptionException)
@@ -97,8 +136,9 @@ class GUITerminal(Terminal):
     def stop(self, *args):
         super().stop()
 
-        if self.named_pipe:
-            logger(__name__).info('Closing pipe...')
-            self.named_pipe.close()
-            logger(__name__).info('Pipe successfully closed and disposed.')
+        if self.writer_named_pipe:
+            logger(__name__).info('Closing pipes...')
+            self.reader_named_pipe.close()
+            self.writer_named_pipe.close()
+            logger(__name__).info('Pipes successfully closed and disposed.')
         quit()
