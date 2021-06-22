@@ -33,13 +33,7 @@ class GUITerminal(Terminal):
 
                     # Names are from the perspective of the CLI
                     self.reader_named_pipe = open(r'//./pipe/pros-gui-reader-pipe', 'r', buffering=1)
-                    logger(__name__).info("...Done!")
-                    break
-                except (OSError, BrokenPipeError):
-                    time.sleep(0.5)
 
-            while True:
-                try:
                     logger(__name__).info("Attempting to connect to the writer named pipe...")
 
                     # Names are from the perspective of the CLI
@@ -54,34 +48,33 @@ class GUITerminal(Terminal):
                                    extra={'sentry': False})
             exit()  # Probably shouldn't use exit here, oh well!
 
-        self.gui_reader_thread = threading.Thread(target=self.gui_reader,
-                                                  name='gui-reader')
-        self.gui_reader_thread.daemon = True
-        self.gui_reader_thread.start()
+        self.gui_reader_thread = None  # type: threading.Thread
+        self._gui_reader_alive = None
 
     def gui_reader(self):
         try:
-            print("Started GUI reading thread...")
-            while True:
+            while not self.alive.is_set() and self._gui_reader_alive:
                 if self.reader_named_pipe:
-                    # self.reader_named_pipe.flush()
-                    # self.reader_named_pipe.seek(0)
-                    # print("Attempting to read...")
                     data = self.reader_named_pipe.readline().strip() + "\n"
-                    # print("Found something")
 
                     if len(data) == 0:
                         print("GUI Connection Lost, Closing...")
                         break
 
-                    # print("Writing " + data)
-
-                    # Write received data to terminal
-                    self.console.write(data)
+                    # Send the data to the STDIN of the PROS program
                     self.device.write(data.encode(encoding='utf-8'))
-        except Exception as ex:
-            print("Encountered error in GUI Reader")
-            print(ex)
+        except UnicodeError as e:
+            logger(__name__).exception(e)
+        except PortConnectionException:
+            if not self.alive.is_set():
+                logger(__name__).warning(f'Connection to {self.device.name} broken')
+                self.stop()
+        except (BrokenPipeError, OSError):
+            if not self.alive.is_set():
+                logger(__name__).warning('Connection to GUI was abruptly stopped. Closing terminal...')
+                self.stop()
+        except Exception as e:
+            self._begin_terminal_closure(e)
 
     def reader(self):
 
@@ -115,30 +108,50 @@ class GUITerminal(Terminal):
             logger(__name__).warning(f'Connection to {self.device.name} broken')
             if not self.alive.is_set():
                 self.stop()
-                self.writer_named_pipe.close()
         except (BrokenPipeError, OSError) as e:
             logger(__name__).warning('Connection to GUI was abruptly stopped. Closing terminal...')
             if not self.alive.is_set():
                 self.stop()
-                self.writer_named_pipe.close()
         except Exception as e:
-            if not self.alive.is_set():
-                logger(__name__).exception(e)
-            else:
-                logger(__name__).debug(e)
-            try:
-                logger(__name__).info("Beginning terminal closure..")
-                self.stop()
-            except Exception as exceptionException:
-                logger(__name__).error("Encountered exception while closing:")
-                logger(__name__).exception(exceptionException)
+            self._begin_terminal_closure(e)
+
+    def _start_gui_rx(self):
+        self._gui_reader_alive = True
+        self.gui_reader_thread = threading.Thread(target=self.gui_reader,
+                                                  name='gui-reader')
+        self.gui_reader_thread.daemon = True
+        self.gui_reader_thread.start()
+
+    def _stop_gui_rx(self):
+        self._gui_reader_alive = False
+        self.gui_reader_thread.join()
+
+    def start(self, *args):
+        super().start()
+
+        self._start_gui_rx()
 
     def stop(self, *args):
         super().stop()
 
+        self._stop_gui_rx()
+
+        # Dispose of named pipe connections
         if self.writer_named_pipe:
             logger(__name__).info('Closing pipes...')
             self.reader_named_pipe.close()
             self.writer_named_pipe.close()
             logger(__name__).info('Pipes successfully closed and disposed.')
         quit()
+
+    def _begin_terminal_closure(self, e):
+        if not self.alive.is_set():
+            logger(__name__).exception(e)
+        else:
+            logger(__name__).debug(e)
+        try:
+            logger(__name__).info("Beginning terminal closure..")
+            self.stop()
+        except Exception as exceptionException:
+            logger(__name__).error("Encountered exception while closing:")
+            logger(__name__).exception(exceptionException)
