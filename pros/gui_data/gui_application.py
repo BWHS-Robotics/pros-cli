@@ -5,6 +5,7 @@ import time
 import subprocess
 
 from pros.serial.devices import StreamDevice
+from pros.serial.ports.v5_wireless_port import V5WirelessPort
 from pros.serial.terminal import Terminal
 
 import struct
@@ -21,6 +22,10 @@ class GUITerminal(Terminal):
                  output_raw: bool = False, request_banner: bool = True):
         super().__init__(port_instance, transformations, output_raw, request_banner)
 
+        self.wireless = port_instance.port is V5WirelessPort
+
+        print(type(port_instance.port))
+
         try:
             # Launch C# GUI EXE
             # TODO: The path is currently hardcoded. Find a way to autodetect where it is?
@@ -29,10 +34,13 @@ class GUITerminal(Terminal):
 
             while True:
                 try:
-                    logger(__name__).info("Attempting to connect to the reader named pipe...")
+                    if not self.wireless:
+                        logger(__name__).info("Attempting to connect to the reader named pipe...")
 
-                    # Names are from the perspective of the CLI
-                    self.reader_named_pipe = open(r'//./pipe/pros-gui-reader-pipe', 'r', buffering=1)
+                        # Names are from the perspective of the CLI
+                        self.reader_named_pipe = open(r'//./pipe/pros-gui-reader-pipe', 'r', buffering=1)
+
+                        logger(__name__).info("...Done!")
 
                     logger(__name__).info("Attempting to connect to the writer named pipe...")
 
@@ -52,6 +60,9 @@ class GUITerminal(Terminal):
         self._gui_reader_alive = None
 
     def gui_reader(self):
+        # Until wireless input is supported, just return for now
+        if self.wireless:
+            return
         try:
             while not self.alive.is_set() and self._gui_reader_alive:
                 if self.reader_named_pipe:
@@ -129,7 +140,8 @@ class GUITerminal(Terminal):
     def start(self, *args):
         super().start()
 
-        self._start_gui_rx()
+        if not self.wireless:
+            self._start_gui_rx()
 
     def stop(self, *args):
         super().stop()
@@ -137,11 +149,12 @@ class GUITerminal(Terminal):
         self._stop_gui_rx()
 
         # Dispose of named pipe connections
+        logger(__name__).info('Closing pipes...')
         if self.writer_named_pipe:
-            logger(__name__).info('Closing pipes...')
-            self.reader_named_pipe.close()
             self.writer_named_pipe.close()
-            logger(__name__).info('Pipes successfully closed and disposed.')
+        if self.reader_named_pipe:
+            self.reader_named_pipe.close()
+        logger(__name__).info('Pipes successfully closed and disposed.')
         quit()
 
     def _begin_terminal_closure(self, e):
