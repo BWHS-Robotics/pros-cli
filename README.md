@@ -1,6 +1,11 @@
-# PROS CLI - GUI Fork
+# PROS CLI - Grafana GUI Fork
 
 [![Build Status](https://dev.azure.com/purdue-acm-sigbots/CLI/_apis/build/status/purduesigbots.pros-cli?branchName=develop)](https://dev.azure.com/purdue-acm-sigbots/CLI/_build/latest?definitionId=6&branchName=develop)
+
+## Grafana Branch Notice
+The ``grafana-migration`` branch is still volatile and does not have any stable release. Documentation for this including the installation and usage will come once the [pros-grafana](https://github.com/BWHS-Robotics/pros-grafana) plugin has been finished, and any necessary CLI changes have been made. 
+
+## PROS
 
 PROS is the only open source development environment for the VEX EDR Platform.
 
