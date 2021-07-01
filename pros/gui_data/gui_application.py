@@ -30,7 +30,7 @@ class GUITerminal(Terminal):
             # Launch C# GUI EXE
             # TODO: The path is currently hardcoded. Find a way to autodetect where it is?
             logger(__name__).info("Launching exe...")
-            # subprocess.Popen(self.GUI_EXE_PATH)
+            subprocess.Popen(self.GUI_EXE_PATH)
 
             while True:
                 try:
