@@ -15,16 +15,11 @@ from pros.serial.ports import PortConnectionException
 
 
 class GUITerminal(Terminal):
-    GUI_EXE_PATH = r"C:\Program Files (x86)\GUI_WPF_Migration-Installer\GUI-WPF-Migration.exe"
-
     def __init__(self, port_instance: StreamDevice, transformations=(),
                  output_raw: bool = False, request_banner: bool = True):
         super().__init__(port_instance, transformations, output_raw, request_banner)
 
         self.chart_manager = ChartManager()
-
-        print("Starting ChartManager")
-        self.chart_manager.connect()
 
     def reader(self):
 
@@ -43,22 +38,14 @@ class GUITerminal(Terminal):
 
                 text = decode_bytes_to_str(data[1])
 
-                # Instead of writing to console, write to a pipe server
-                # As the C# GUI currently doesn't have support for ASCII color codes, filter them from the output See
+                # As the GUI currently doesn't have support for ASCII color codes, filter them from the output See
                 # https://stackoverflow.com/questions/30425105/filter-special-chars-such-as-color-codes-from-shell
                 # -output for more details
                 # In order to separate the data from standard cout/printf, we add a unique header prefix
                 text = re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', text)
 
+                # Instead of writing to console, we send the data to the ChartManager
                 self.chart_manager.parse(text)
-
-                # encoded_message = text.encode("ascii")
-
-
-
-                # Pack data using struct and send it to the named pipe
-                # self.named_pipe.write(struct.pack('I', len(encoded_message)) + encoded_message)
-                # self.named_pipe.seek(0)
         except UnicodeError as e:
             logger(__name__).exception(e)
         except PortConnectionException:

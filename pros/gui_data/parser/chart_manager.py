@@ -4,13 +4,34 @@ import time
 
 from pros.gui_data.db.sqlite_wrapper import SQLiteWrapper
 
+# Headers are responsible for differentiating information coming from the V5 brain. Based on a header, the data can
+# be used as a configuration, raw data for a graph/display, or as a logging statement. For sending configuration
+# data, sometimes the data is too large for the VexOS buffer and needs to be broken into chunks. To solve this,
+# data is placed in a buffer, where the program will wait until an entire concatenated bytearray contains both
+# CONFIG_HEADER and CONFIG_END_HEADER. In the future, the data strings will also need to be put in a similar buffer.
+#
+# DATA_HEADER - Found at the beginning of a statement containing variable data
+# CONFIG_HEADER - Found at the beginning of a configuration message
+# CONFIG_END_HEADER - Found at the end of a configuration message
 DATA_HEADER = "GUI_DATA_8378"
 CONFIG_HEADER = "GUI_DATA_CONF_8378"
 CONFIG_END_HEADER = "GUI_DATA_CONF_3434_END"
 
 
 class ChartManager:
+    """
+    Responsible for parsing data from the V5 brain and writing it to the SQLite file.
+    """
+
     class Status:
+        """
+        Represents the current status of the ChartManager.
+
+        STOPPED - The ChartManager is currently not functioning
+        AWAITING_CONFIGURATION - The ChartManager is waiting to receive both the CONFIG_HEADER and CONFIG_END_HEADER
+        RECEIVING_DATA - The ChartManager has received the configuration, and is now actively listening for any new
+                         data coming through
+        """
         STOPPED = 0
         AWAITING_CONFIGURATION = 1
         RECEIVING_DATA = 2
@@ -24,51 +45,57 @@ class ChartManager:
 
         return
 
-    def connect(self):
-        return
-
     def parse(self, raw_data_string):
+        """
+        Parses an incoming raw string from the V5 brain.
+
+        @param raw_data_string: The data string received from the V5 brain to be parsed
+        """
         try:
             header, data = self.__parse_data(raw_data_string)
 
             if self.status == self.Status.AWAITING_CONFIGURATION:
                 if data.strip().endswith(CONFIG_END_HEADER):
-                    self.config_string += data[0:-(len(CONFIG_END_HEADER)+1)]
-
-                    print(self.config_string)
+                    # The program has found the end of the configuration data, append the last bit excluding the end
+                    # header string
+                    self.config_string += data[0:-(len(CONFIG_END_HEADER) + 1)]
 
                     self.config_json = json.loads(self.config_string)
 
                     columns = {}
 
+                    # To add each chart element to a new SQLite table, we need to assign it a variable type of REAL
+                    # (REAL is a floating point number in SQLite)
                     for chart in self.config_json:
                         columns[chart] = "REAL"
 
+                    # Initialize the database and open a connection
                     self.db = SQLiteWrapper("guidata")
                     self.db.open()
 
-
+                    # Create the table
                     self.db.begin()
                     self.table = self.db.create_table("data", date="timestamp", **columns)
                     self.db.commit()
 
-                    print("Setting status")
                     self.status = self.Status.RECEIVING_DATA
                     return
                 else:
+                    # The program hasn't found the end configuration header yet, keep appending any new information
                     self.config_string += re.sub('\n', '', self.config_string)
                     return
             elif self.status == self.Status.RECEIVING_DATA:
-                print("HEADER: " + header.strip())
                 if header.strip() == DATA_HEADER:
                     data_json = json.loads(data)
 
-                    # I'm going to assume this will still be in order
                     data_values = []
 
+                    # As the JSON will be loaded in the same order everytime, we can simply loop through each json item
+                    # and append it to data_values, a list of floats ready to be sent to the SQLite table.
                     for key, value in data_json.items():
                         data_values.append(value)
 
+                    # Insert a new record containing the data_values information
                     self.db.begin()
                     self.table.insert_row(time.time(), *data_values)
                     self.db.commit()
@@ -77,6 +104,10 @@ class ChartManager:
             return
 
     def __parse_data(self, raw_data_string):
+        """
+        Parses a raw data string into its header and data components @param raw_data_string: @return: The header and
+        data parsed from the raw_data_string. If the parse was unsuccessful, the method will return none.
+        """
         print(raw_data_string)
 
         split = raw_data_string.split("|")

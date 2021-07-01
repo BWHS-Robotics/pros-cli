@@ -34,6 +34,9 @@ class Table:
 
 
 class SQLiteWrapper:
+    """
+    Wrapper class for handling interactions with a SQLite database.
+    """
     def __init__(self, db_name):
         self.db_name = db_name
         self.db_connection = None
@@ -45,7 +48,7 @@ class SQLiteWrapper:
         :raises sqlite3.Error if the program was unable to connect to the database
         """
         try:
-            # If the user hasn't appended the sqlite filetype, go ahead and manually add it
+            # If the user hasn't appended the 'sqlite' extension when specifying the file, go ahead and add it
             if not self.db_name.endswith(""".sqlite"""):
                 self.db_name += ".sqlite"
             print(__file__)
