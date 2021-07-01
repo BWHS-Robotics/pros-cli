@@ -3,7 +3,8 @@
 [![Build Status](https://dev.azure.com/purdue-acm-sigbots/CLI/_apis/build/status/purduesigbots.pros-cli?branchName=develop)](https://dev.azure.com/purdue-acm-sigbots/CLI/_build/latest?definitionId=6&branchName=develop)
 
 ## Fork Notice
-While this project is currently open source, it is still very much work in progress. As soon as the project has reached a stable status documentation and examples will be added and will contain release packages to easily install. 
+While this project is currently open source, it is still very much work in progress. As soon as the project has reached a stable status documentation and examples will be added, as well as release packages to easily install the repository into your workspace. 
+
 
 PROS is the only open source development environment for the VEX EDR Platform.
 
