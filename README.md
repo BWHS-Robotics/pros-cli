@@ -1,12 +1,10 @@
-# PROS CLI - GUI Fork
+# PROS CLI - Grafana GUI Fork
 
 [![Build Status](https://dev.azure.com/purdue-acm-sigbots/CLI/_apis/build/status/purduesigbots.pros-cli?branchName=develop)](https://dev.azure.com/purdue-acm-sigbots/CLI/_build/latest?definitionId=6&branchName=develop)
 
+=======
 ## Info
-This fork is used for connecting to either the [C# GUI](https://github.com/BWHS-Robotics/WestCore-GUI) project or the [Grafana plugin](https://github.com/BWHS-Robotics/pros-grafana), adding the new command ``pros gui``. After installation more info on using this project can be found on the [PROS GUI template repository](https://github.com/BWHS-Robotics/pros-gui-template). 
-
-## Using Grafana
-Currently the Grafana version of this CLI is located in the branch ``grafana-migration``. If you are wanting to use this version, make sure to clone that branch instead of ``develop`` during the installation. 
+This fork is used for connecting to the [Grafana plugin](https://github.com/BWHS-Robotics/pros-grafana), adding the new command ``pros gui``. After installation, more info on using this project can be found on the [PROS GUI template repository](https://github.com/BWHS-Robotics/pros-gui-template). 
 
 ## Fork Installation 
 Until releases are made for this fork, the only way to install the CLI is through PIP.
@@ -14,6 +12,7 @@ Until releases are made for this fork, the only way to install the CLI is throug
 For more information, please see the ``Installing for development`` section below. 
 
 ## PROS 
+
 PROS is the only open source development environment for the VEX EDR Platform.
 
 This project provides all of the project management related tasks for PROS. It is currently responsible for:
