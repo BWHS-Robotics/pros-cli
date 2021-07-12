@@ -1,3 +1,4 @@
+import datetime
 import json
 import re
 import time
@@ -45,14 +46,21 @@ class ChartManager:
 
         return
 
-    def parse(self, raw_data_string):
+    def parse(self, gui_application, raw_data_string):
         """
         Parses an incoming raw string from the V5 brain.
 
+        @param gui_application: The current GUIApplication, used for sending data back to the brain
         @param raw_data_string: The data string received from the V5 brain to be parsed
         """
         try:
             header, data = self.__parse_data(raw_data_string)
+
+            # If the header was unable to be parsed, it's likely a normal debug statement. In this case, we just print
+            # it in the same way a Terminal would.
+            if header == "" or data == "":
+                gui_application.console.write(raw_data_string)
+                return
 
             if self.status == self.Status.AWAITING_CONFIGURATION:
                 if data.strip().endswith(CONFIG_END_HEADER):
@@ -75,7 +83,7 @@ class ChartManager:
 
                     # Create the table
                     self.db.begin()
-                    self.table = self.db.create_table("data", date="timestamp", **columns)
+                    self.table = self.db.create_table("data", date="text", **columns)
                     self.db.commit()
 
                     self.status = self.Status.RECEIVING_DATA
@@ -97,7 +105,12 @@ class ChartManager:
 
                     # Insert a new record containing the data_values information
                     self.db.begin()
-                    self.table.insert_row(time.time(), *data_values)
+
+                    # Retrieve a datetime with the RFC3339 format
+                    date = datetime.datetime.utcnow()
+                    date_str = date.isoformat("T") + "Z"
+                    
+                    self.table.insert_row(date_str, *data_values)
                     self.db.commit()
                     return
         except TypeError:
@@ -108,16 +121,12 @@ class ChartManager:
         Parses a raw data string into its header and data components @param raw_data_string: @return: The header and
         data parsed from the raw_data_string. If the parse was unsuccessful, the method will return none.
         """
-        print(raw_data_string)
 
         split = raw_data_string.split("|")
 
-        print(split)
-
         # We need to have at least 2 elements when splitting off of '|'
         if len(split) != 2:
-            print("Split length not 2")
-            return None
+            return "", ""
 
         # Split into header and data components
         header = split[0]  # Contains the file header

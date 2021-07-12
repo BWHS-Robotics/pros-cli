@@ -38,14 +38,8 @@ class GUITerminal(Terminal):
 
                 text = decode_bytes_to_str(data[1])
 
-                # As the GUI currently doesn't have support for ASCII color codes, filter them from the output See
-                # https://stackoverflow.com/questions/30425105/filter-special-chars-such-as-color-codes-from-shell
-                # -output for more details
-                # In order to separate the data from standard cout/printf, we add a unique header prefix
-                text = re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', text)
-
                 # Instead of writing to console, we send the data to the ChartManager
-                self.chart_manager.parse(text)
+                self.chart_manager.parse(self, text)
         except UnicodeError as e:
             logger(__name__).exception(e)
         except PortConnectionException:

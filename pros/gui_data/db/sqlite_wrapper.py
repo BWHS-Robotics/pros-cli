@@ -13,8 +13,6 @@ class Table:
 
         column_string = column_string[:-1]
 
-        print(column_string)
-
         # Create the table
         self.db.execute("""CREATE TABLE IF NOT EXISTS '%s' (%s)""" % (name, column_string))
 
@@ -51,11 +49,9 @@ class SQLiteWrapper:
             # If the user hasn't appended the 'sqlite' extension when specifying the file, go ahead and add it
             if not self.db_name.endswith(""".sqlite"""):
                 self.db_name += ".sqlite"
-            print(__file__)
-            print("Initializing db")
-            print(self.db_name)
+
             self.db_connection = sqlite3.connect(self.db_name)
-            print("Successfully connected to db")
+
             self.db_connection.isolation_level = None
             self.cursor = self.db_connection.cursor()
         except sqlite3.Error:
@@ -74,7 +70,6 @@ class SQLiteWrapper:
         Executes a given SQLite string
         :param sql_str: A SQL statement to be sent to the SQLite database
         """
-        print(sql_str)
 
         self.cursor.execute(sql_str)
 
