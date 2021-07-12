@@ -2,10 +2,16 @@
 
 [![Build Status](https://dev.azure.com/purdue-acm-sigbots/CLI/_apis/build/status/purduesigbots.pros-cli?branchName=develop)](https://dev.azure.com/purdue-acm-sigbots/CLI/_build/latest?definitionId=6&branchName=develop)
 
-## Grafana Branch Notice
-The ``grafana-migration`` branch is still volatile and does not have any stable release. Documentation for this including the installation and usage will come once the [pros-grafana](https://github.com/BWHS-Robotics/pros-grafana) plugin has been finished, and any necessary CLI changes have been made. 
+=======
+## Info
+This fork is used for connecting to the [Grafana plugin](https://github.com/BWHS-Robotics/pros-grafana), adding the new command ``pros gui``. After installation, more info on using this project can be found on the [PROS GUI template repository](https://github.com/BWHS-Robotics/pros-gui-template). 
 
-## PROS
+## Fork Installation 
+Until releases are made for this fork, the only way to install the CLI is through PIP.
+
+For more information, please see the ``Installing for development`` section below. 
+
+## PROS 
 
 PROS is the only open source development environment for the VEX EDR Platform.
 
@@ -36,5 +42,6 @@ Here's a quick breakdown of the packages involved in this project:
 - `pros.jinx`: JINX parsing and server
 - `pros.serial`: package for all serial communication with VEX Microcontrollers
 - `pros.upgrade`: package for upgrading the PROS CLI, including downloading and executing installation sequence
+- `pros.gui_data`: package for linking either to the ``pros-grafana`` plugin or ``WestCore-GUI``. 
 
 See https://pros.cs.purdue.edu/v5/cli for end user documentation and developer notes.
